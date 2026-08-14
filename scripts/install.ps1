@@ -1,5 +1,6 @@
 # install.ps1 — 一键安装 dsa-zotero-sidebar 到某个 DSH profile（Windows / PowerShell 5.1+）。
-# 等效于 README 的「手动安装」三步骤，全部幂等，可安全重复执行。
+# 等效于 README 的「手动安装」步骤，全部幂等，可安全重复执行。
+# 若上游 dsh-better-sidebar 未安装，会先执行它的官方一键安装脚本。
 #
 # 用法：
 #   .\install.ps1 [-Profile web] [-Restart] [-DryRun]
@@ -18,6 +19,9 @@ $ErrorActionPreference = 'Stop'
 $DSH_HOME = if ($env:DSH_HOME) { $env:DSH_HOME } else { "$HOME\.dsh" }
 $ProfileDir = Join-Path $DSH_HOME "profiles\$Profile"
 $Package = 'dsa-zotero-sidebar'
+# 上游依赖：本插件挂在 dsh-better-sidebar 的右侧栏上；未装则先装它。
+$Better   = 'dsh-better-sidebar'
+$BetterSource = 'https://raw.githubusercontent.com/omdsh-dev/DSH-better-sidebar/main/scripts/install.ps1'
 
 function Info($m) { Write-Host "[install] $m" -ForegroundColor Cyan }
 function Warn($m) { Write-Host "[install] $m" -ForegroundColor Yellow }
@@ -35,22 +39,40 @@ if (-not (Test-Path $ProfileDir)) { Err "找不到 profile 目录：$ProfileDir�
 
 Info "安装 dsa-zotero-sidebar → profile: $Profile"
 
-# ── ① 放行构建脚本 ───────────────────────────────────────
-Info '① 放行构建脚本（pnpm approve-builds）'
+# ── ① 上游依赖：确认已装 dsh-better-sidebar，未装则先执行官方安装 ─────
+Info "① 检查上游依赖 $Better"
+Push-Location $ProfileDir
+try {
+  if (Test-Path "node_modules\$Better") {
+    Info '  已安装 dsh-better-sidebar，跳过'
+  } else {
+    Warn '未检测到 dsh-better-sidebar，先执行其官方一键安装…'
+    if ($DryRun) {
+      Write-Host "  · irm $BetterSource | iex" -ForegroundColor DarkGray
+    } else {
+      Info "▸ irm $BetterSource | iex"
+      Invoke-Expression "irm '$BetterSource' | iex"
+      Warn '请确认上游安装成功后再重跑本脚本（本脚本继续执行以免漏装本插件）。'
+    }
+  }
+} finally { Pop-Location }
+
+# ── ② 放行构建脚本（pnpm 11 拦截，本插件）────────────────
+Info '② 放行构建脚本（pnpm approve-builds）'
 Push-Location $ProfileDir
 try {
   Exec 'pnpm approve-builds --all'
 } finally { Pop-Location }
 
-# ── ② 放行不足 24h 的新版本 ───────────────────────────────
-Info '② 戳 pnpm-workspace.yaml 的 minimumReleaseAgeExclude'
+# ── ③ 放行不足 24h 的新版本 ───────────────────────────────
+Info '③ 戳 pnpm-workspace.yaml 的 minimumReleaseAgeExclude'
 Push-Location $ProfileDir
 try {
   $WS = Join-Path $ProfileDir 'pnpm-workspace.yaml'
   if (Test-Path $WS) {
     $content = Get-Content $WS -Raw -ErrorAction SilentlyContinue
     if ($content -match 'minimumReleaseAgeExclude') {
-      if ($content -match "- $Package") { Info '  已存在 dsa-zotero-sidebar，跳过' }
+      if ($content -match "- $Package") { Info '  已放行 dsa-zotero-sidebar' }
       else { Exec "Add-Content -Path '$WS' -Value \" - $Package\"" }
     } else {
       Exec "Add-Content -Path '$WS' -Value \"`nminimumReleaseAgeExclude:`n  - $Package\""
@@ -60,12 +82,12 @@ try {
   }
 } finally { Pop-Location }
 
-# ── ③ 安装并自动挂载 ──────────────────────────────────────
-Info "③ dsh plugin --profile $Profile add $Package"
+# ── ④ 安装并自动挂载本插件 ────────────────────────────────
+Info "④ dsh plugin --profile $Profile add $Package"
 Exec "dsh plugin --profile '$Profile' add '$Package'"
 
-# ── ④ 清理旧版手动挂载残留 ─────────────────────────────────
-Info '④ 检查旧版手动挂载残留'
+# ── ⑤ 清理旧版手动挂载残留 ────────────────────────────────
+Info '⑤ 检查旧版手动挂载残留'
 Push-Location $ProfileDir
 try {
   $PATCH = Join-Path $ProfileDir 'cordis.patch.yml'

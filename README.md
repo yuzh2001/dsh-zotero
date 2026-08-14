@@ -79,8 +79,9 @@ npx -y --package @deepseek-ai/dsh dsh plugin --profile web add dsa-zotero-sideba
 <details>
 <summary><b>脚本内部做了什么（技术细节）</b></summary>
 
-一键脚本自动完成 4 件事（全部幂等，可安全重复执行）：
+一键脚本自动完成 5 件事（全部幂等，可安全重复执行）：
 
+0. **上游依赖自检**：若该 profile 未装 [dsh-better-sidebar](https://github.com/omdsh-dev/DSH-better-sidebar)（本插件的宿主），先执行它的官方一键安装；
 1. 预写 `allowBuilds`（规避 pnpm 11 的构建脚本拦截）；
 2. 预写 `minimumReleaseAgeExclude`，放行「发布不足 24 小时」的新版本；
 3. 执行 `dsh plugin --profile <profile> add dsa-zotero-sidebar`：登记依赖 → 识别包内 `dsh.bundle.patch` → 自动注册进 `dsh.profile.bundles` 挂载；
