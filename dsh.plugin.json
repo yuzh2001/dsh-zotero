@@ -1,0 +1,16 @@
+{
+  "id": "dsh-external/dsa-zotero-sidebar",
+  "version": "0.1.0",
+  "main": "./lib/index.js",
+  "description": "Zotero 侧边栏：在 better-sidebar 右侧边栏用 @pierre/trees 渲染 Zotero 文件树，host 半调 zotero-cli 出数据，支持懒加载。",
+  "engines": {
+    "dsh": ">=0.0.1"
+  },
+  "contributes": {
+    "tools": [],
+    "skills": []
+  },
+  "client": {
+    "main": "./lib/client.js"
+  }
+}

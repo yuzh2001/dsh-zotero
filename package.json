@@ -1,0 +1,66 @@
+{
+  "name": "dsa-zotero-sidebar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zotero 侧边栏插件：在 dsh-better-sidebar 右侧边栏用 @pierre/trees 渲染 Zotero 文件树，host 半调 zotero-cli 出数据，支持懒加载展开子节点。",
+  "license": "MIT",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "engines": {
+    "dsh": ">=0.0.1"
+  },
+  "scripts": {
+    "build": "rm -rf lib && tsc -p tsconfig.build.json && tsdown",
+    "typecheck": "tsc --noEmit",
+    "bundle": "tsdown",
+    "pack": "pnpm pack"
+  },
+  "peerDependencies": {
+    "cordis": "^4.0.0-rc.7",
+    "dsh-better-sidebar": "0.10.3"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    },
+    "cordis": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@pierre/trees": "1.0.0-beta.6"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "dsh-better-sidebar": "0.10.3",
+    "lightningcss": "^1.29.0",
+    "react": "^19.0.0",
+    "tsdown": "^0.22.3",
+    "typescript": "^5.7.0"
+  }
+}

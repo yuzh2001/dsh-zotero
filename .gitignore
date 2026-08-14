@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build output (reproducible via `npx tsdown`)
+lib/
+
+# Bundle artifacts
+*.tgz
+
+# Runtime logs & session data (large, possibly sensitive)
+session.jsonl
+dsh-session-*.zip
+dsh-session-*/
+*.log
+
+# Unrelated mirror of another plugin directory
+dsa-cache-stats/
+
+# OS junk
+.DS_Store
