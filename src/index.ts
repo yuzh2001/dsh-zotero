@@ -147,7 +147,7 @@ export function apply(ctx: Context): void {
   if (tools !== undefined) {
     ctx.effect(() => tools.register({
       name: 'resolve_zotero_ref',
-      description: 'Resolve one Zotero reference — a `[title]{%ZoteroItem:KEY}` token inserted by the Zotero sidebar — into the referenced paper\'s details: title, authors, year, abstract, and library path. When the conversation contains a `{%ZoteroItem:KEY}` token, extract the KEY and call this tool to obtain the paper\'s metadata.',
+      description: 'Resolve one Zotero reference — a `[title]{%ZoteroItem:KEY}` token inserted by the Zotero sidebar — into the referenced paper\'s rich details: title, type, authors (full list), year, venue, abstract, tags, extra fields (DOI/url/...), library path, and the attached files (e.g. PDFs) with their on-disk absolute paths. When the conversation contains a `{%ZoteroItem:KEY}` token, extract the KEY and call this tool to obtain the paper\'s metadata and its PDF location.',
       parameters: {
         type: 'object',
         properties: {
@@ -176,10 +176,47 @@ export function apply(ctx: Context): void {
               properties: {
                 key: { type: 'string' },
                 title: { type: 'string' },
+                typeName: { type: 'string' },
                 creatorsLabel: { type: 'string' },
+                creators: { type: 'array', items: { type: 'string' } },
                 year: { type: 'string' },
+                venue: { type: 'string' },
                 abstractPreview: { type: 'string' },
                 path: { type: 'string' },
+                dateAdded: { type: 'string' },
+                dateModified: { type: 'string' },
+                tags: { type: 'array', items: { type: 'string' } },
+                fields: {
+                  type: 'object',
+                  additionalProperties: true,
+                  properties: {
+                    DOI: { type: 'string' },
+                    url: { type: 'string' },
+                    pages: { type: 'string' },
+                    volume: { type: 'string' },
+                    issue: { type: 'string' },
+                    publisher: { type: 'string' },
+                    place: { type: 'string' },
+                    ISBN: { type: 'string' },
+                    ISSN: { type: 'string' },
+                  },
+                },
+                attachments: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    additionalProperties: true,
+                    properties: {
+                      key: { type: 'string' },
+                      filename: { type: 'string' },
+                      path: { type: 'string' },
+                      linkMode: { type: 'number' },
+                      contentType: { type: 'string' },
+                      absolutePath: { type: 'string' },
+                      isPDF: { type: 'boolean' },
+                    },
+                  },
+                },
               },
             },
           },
@@ -190,13 +227,24 @@ export function apply(ctx: Context): void {
             const err = resolved !== null && typeof resolved.error === 'string' ? resolved.error : 'Zotero reference not resolved'
             return [{ type: 'text', text: `Zotero 引用解析失败：${err}` }]
           }
-          const v = resolved.value as { title?: string; creatorsLabel?: string; year?: string; abstractPreview?: string; path?: string }
+          const v = resolved.value as {
+            title?: string; creatorsLabel?: string; year?: string; abstractPreview?: string
+            path?: string; venue?: string; tags?: string[]; attachments?: Array<{
+              key?: string; filename?: string; absolutePath?: string; contentType?: string; isPDF?: boolean; path?: string
+            }>
+          }
           const lines = [
             `【Zotero 引用】${v.title ?? ''}`,
             ...(v.creatorsLabel ? [`作者: ${v.creatorsLabel}`] : []),
             ...(v.year ? [`年份: ${v.year}`] : []),
+            ...(v.venue ? [`出处: ${v.venue}`] : []),
+            ...((v.tags?.length ?? 0) > 0 ? [`标签: ${v.tags!.join(', ')}`] : []),
             ...(v.abstractPreview ? [`摘要: ${v.abstractPreview}${v.abstractPreview.length >= 200 ? '…' : ''}`] : []),
             ...(v.path ? [`位置: ${v.path}`] : []),
+            ...(v.attachments && v.attachments.length > 0 ? [
+              `附件:`,
+              ...v.attachments.map((a) => `  · ${a.filename ?? a.key ?? '(unnamed)'}${a.isPDF ? ' [PDF]' : ''} → ${a.absolutePath ?? a.path ?? '(不在本地，仅存链接)'}`),
+            ] : []),
           ]
           return [{ type: 'text', text: lines.join('\n') }]
         },

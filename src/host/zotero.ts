@@ -18,13 +18,16 @@
 import { ZoteroSnapshotCache, ZoteroSnapshotWatcher, zoteroLiveDbPath } from './zotero-sqlite.js'
 import type { ZoteroLibrary, ZoteroRow } from './zotero-sqlite.js'
 import type {
+  ZoteroAttachmentInfo,
   ZoteroCollectionNode,
   ZoteroItem,
+  ZoteroItemResolve,
   ZoteroItemSummary,
   ZoteroNodeDescriptor,
   ZoteroSearchResponse,
   ZoteroSearchResult,
 } from '../shared.js'
+import { basename } from 'node:path'
 
 /** The single top-level virtual node: the whole library (a directory → trailing slash). */
 export const ROOT_NAME = 'Zotero 文库/'
@@ -292,13 +295,62 @@ export class ZoteroHost {
     return { query: q, results }
   }
 
-  /** Resolve one item's detail by key (for the model's resolve tool). */
-  async resolveByKey(key: string): Promise<ZoteroItemSummary & { path?: string } | null> {
+  /**
+   * Resolve one item's rich detail by key (for the model's resolve tool).
+   * Unlike the search/summary slice, this carries the full creator list, tags,
+   * timestamps, extra bibliography fields, and — most importantly for the user —
+   * the item's attached files (PDFs etc.) with their on-disk locations.
+   */
+  async resolveByKey(key: string): Promise<ZoteroItemResolve | null> {
     const row = this.ensureLibrary().itemsByKey.get(key)
     if (row === undefined) return null
+    const fields = (row.fields ?? {}) as Record<string, string>
     const summary = this.itemSummary(this.toItem(row))
     const path = this.findPathByKey(key)
-    return path === undefined ? summary : { ...summary, path }
+    const creators = (row.creators ?? []).map((c) => c.name).filter(Boolean) as string[]
+    const attachments = this.attachmentInfos(row)
+    const dateAdded = row.dateAdded ?? undefined
+    const dateModified = row.dateModified ?? undefined
+    const knownFieldKeys = [
+      'abstractNote', 'date', 'publicationTitle', 'bookTitle', 'proceedingsTitle',
+      'conferenceName', 'publisher', 'DOI', 'url', 'ISBN', 'ISSN',
+      'journalAbbreviation', 'language', 'place', 'volume', 'issue', 'pages',
+      'series', 'edition', 'version', 'archive', 'archiveLocation', 'callNumber',
+      'rights', 'accessDate', 'shortTitle', 'title',
+    ]
+    const extraFields: Record<string, string> = {}
+    for (const k of knownFieldKeys) {
+      const v = fields[k]
+      if (typeof v === 'string' && v.trim() !== '') extraFields[k] = v
+    }
+    const out: ZoteroItemResolve = {
+      ...summary,
+      ...(path !== undefined ? { path } : {}),
+      ...(dateAdded !== undefined ? { dateAdded } : {}),
+      ...(dateModified !== undefined ? { dateModified } : {}),
+      tags: row.tags ?? [],
+      creators,
+      attachments,
+      fields: extraFields,
+    }
+    return out
+  }
+
+  /** Build wire-friendly attachment descriptors (with on-disk PDF locations). */
+  private attachmentInfos(row: ZoteroRow): ZoteroAttachmentInfo[] {
+    return (row.attachments ?? []).map((a) => {
+      const filename = a.absolutePath ?? a.path?.replace(/^storage:/, '') ?? null
+      const isPDF = a.contentType === 'application/pdf' || /\.pdf$/i.test(filename ?? '')
+      return {
+        key: a.key,
+        filename,
+        path: a.path,
+        linkMode: a.linkMode,
+        contentType: a.contentType,
+        absolutePath: a.absolutePath,
+        isPDF,
+      }
+    })
   }
 
   private findPathByKey(key: string): string | undefined {

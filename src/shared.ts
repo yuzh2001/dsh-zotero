@@ -97,6 +97,41 @@ export interface ZoteroSearchResult extends ZoteroItemSummary {
   path?: string
 }
 
+/** Resolved attachment location info (wire-friendly) for the resolve tool. */
+export interface ZoteroAttachmentInfo {
+  /** The attachment item's own key (= the storage/ subdirectory name). */
+  key: string
+  /** File name (basename of the stored file), when derivable. */
+  filename: string | null
+  /** The `path` column verbatim (e.g. `storage:abcDEF1.pdf` or an absolute/URL path). */
+  path: string | null
+  /** Zotero linkMode: 0=imported file, 1=imported URL, 2=linked file, 3=linked URL. */
+  linkMode: number | null
+  /** MIME content type (e.g. `application/pdf`), when known. */
+  contentType: string | null
+  /** Absolute path on disk when resolvable (null for URL-only / unresolved / missing). */
+  absolutePath: string | null
+  /** True when this attachment is a PDF. */
+  isPDF: boolean
+}
+
+/** The rich detail returned by the model's resolve_zotero_ref tool. */
+export interface ZoteroItemResolve extends ZoteroItemSummary {
+  /** Library tree path the item sits under, when resolvable. */
+  path?: string
+  /** Item creation/modification timestamps, when stored. */
+  dateAdded?: string
+  dateModified?: string
+  /** Tags on the item (empty when none). */
+  tags: string[]
+  /** Full creator labels (untruncated — `creatorsLabel` is capped at 4). */
+  creators: string[]
+  /** Attached files (PDFs / others), each with its on-disk location. */
+  attachments: ZoteroAttachmentInfo[]
+  /** Extra bibliography fields (doi, url, journalAbbreviation, language, ...), when present. */
+  fields?: Record<string, string>
+}
+
 /** Result of a Zotero item search. */
 export interface ZoteroSearchResponse {
   query: string
