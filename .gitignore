@@ -18,3 +18,6 @@ dsa-cache-stats/
 
 # OS junk
 .DS_Store
+
+# Throwaway dev/test scripts
+scripts/resolve-check.ts
