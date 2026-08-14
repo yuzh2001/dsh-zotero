@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Zotero 侧边栏插件：在 dsh-better-sidebar 右侧边栏用 @pierre/trees 渲染 Zotero 文件树，host 半调 zotero-cli 出数据，支持懒加载展开子节点。",
+  "description": "在 DeepSeek Harness 中浏览、搜索并引用 Zotero 文献库：better-sidebar 右侧栏文件树、双击/& 与 /zotero 快速引用、host 直读 zotero.sqlite",
   "license": "MIT",
   "main": "lib/index.js",
   "exports": {
