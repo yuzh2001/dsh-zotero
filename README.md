@@ -147,7 +147,6 @@ pnpm bundle      # tsdown → lib/index.js + lib/client.js + lib/types
 
 - 需要本机装着 Zotero（读它的 SQLite），不支持只读 Zotero Web API
 - 双击/搜索引用插入的是题名字面 + key 的纯文本，不改写原库
-- 首次读取大库树可能稍慢（懒加载按需展开）
 
 ## 🔗 友情链接
 
